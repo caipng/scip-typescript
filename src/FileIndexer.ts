@@ -31,7 +31,8 @@ export class FileIndexer {
     public readonly document: lsif.lib.codeintel.lsiftyped.Document,
     public readonly globalSymbolTable: Map<ts.Node, LsifSymbol>,
     public readonly packages: Packages,
-    public readonly sourceFile: ts.SourceFile
+    public readonly sourceFile: ts.SourceFile,
+    public readonly languageService: ts.LanguageService
   ) {}
   public index(): void {
     this.visit(this.sourceFile)

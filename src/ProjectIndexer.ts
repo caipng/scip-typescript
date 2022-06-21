@@ -20,7 +20,8 @@ export class ProjectIndexer {
   private packages: Packages
   constructor(
     public readonly config: ts.ParsedCommandLine,
-    options: ProjectOptions
+    options: ProjectOptions,
+    public readonly languageService: ts.LanguageService
   ) {
     this.options = options
     this.program = ts.createProgram(config.fileNames, config.options)
@@ -84,7 +85,8 @@ export class ProjectIndexer {
         document,
         this.symbolCache,
         this.packages,
-        sourceFile
+        sourceFile,
+        this.languageService
       )
       try {
         visitor.index()

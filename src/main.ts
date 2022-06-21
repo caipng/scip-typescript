@@ -130,9 +130,66 @@ function indexSingleProject(options: ProjectOptions): void {
     })
   }
 
-  if (config.fileNames.length > 0) {
-    new ProjectIndexer(config, options).index()
+  if (config.fileNames.length === 0) {
+    return
   }
+
+  // Bind all symbols
+  const scriptSnapshots: Map<string, ts.IScriptSnapshot> = new Map()
+  const host: ts.LanguageServiceHost = {
+    getScriptFileNames: () => config.fileNames,
+    getCompilationSettings: () => config.options,
+    getProjectReferences: () => config.projectReferences,
+    // The files are immutable.
+    getScriptVersion: (): string => '0',
+    // The project is immutable
+    getProjectVersion: () => '0',
+    getScriptSnapshot: (fileName: string): ts.IScriptSnapshot | undefined => {
+      let result: ts.IScriptSnapshot | undefined = scriptSnapshots.get(fileName)
+      if (result === undefined) {
+        if (!ts.sys.fileExists(fileName)) {
+          return undefined
+        }
+        const content = ts.sys.readFile(fileName)
+        if (content === undefined) {
+          return undefined
+        }
+        result = ts.ScriptSnapshot.fromString(content)
+        scriptSnapshots.set(fileName, result)
+      }
+      return result
+    },
+    getCurrentDirectory: () => {
+      if (tsconfigFileName !== undefined) {
+        return path.dirname(tsconfigFileName)
+      }
+      return process.cwd()
+    },
+    getDefaultLibFileName: options => ts.getDefaultLibFilePath(options),
+    directoryExists: (directoryName: string) =>
+      ts.sys.directoryExists(directoryName),
+    getDirectories: (directoryName: string) =>
+      ts.sys.getDirectories(directoryName),
+    fileExists: (path: string) => ts.sys.fileExists(path),
+    readFile: (path: string, encoding?: string) =>
+      ts.sys.readFile(path, encoding),
+    readDirectory: (
+      path: string,
+      extensions?: readonly string[],
+      exclude?: readonly string[],
+      include?: readonly string[],
+      depth?: number
+    ) => ts.sys.readDirectory(path, extensions, exclude, include, depth),
+  }
+  const languageService = ts.createLanguageService(host)
+  const program = languageService.getProgram()
+  if (program === undefined) {
+    console.error("Couldn't create language service with underlying program.")
+    process.exitCode = -1
+    return undefined
+  }
+
+  new ProjectIndexer(config, options, languageService).index()
 }
 
 if (require.main === module) {
