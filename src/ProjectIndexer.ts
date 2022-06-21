@@ -3,7 +3,8 @@ import { Writable as WritableStream } from 'stream'
 
 import prettyMilliseconds from 'pretty-ms'
 import ProgressBar from 'progress'
-import * as ts from 'typescript'
+// eslint-disable-next-line id-length
+import ts from 'typescript-lsif'
 
 import { ProjectOptions } from './CommandLineOptions'
 import { FileIndexer } from './FileIndexer'

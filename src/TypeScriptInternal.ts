@@ -1,4 +1,5 @@
-import * as ts from 'typescript'
+// eslint-disable-next-line id-length
+import ts from 'typescript-lsif'
 
 // Functions in this file are based directly off corresponding functions
 // in the TypeScript codebase.

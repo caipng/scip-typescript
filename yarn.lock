@@ -2708,10 +2708,14 @@ typescript-eslint@0.0.1-alpha.0:
   resolved "https://registry.yarnpkg.com/typescript-eslint/-/typescript-eslint-0.0.1-alpha.0.tgz#285d68a4e96588295cd436278801bcb6a6b916c1"
   integrity sha512-1hNKM37dAWML/2ltRXupOq2uqcdRQyDFphl+341NTPXFLLLiDhErXx8VtaSLh3xP7SyHZdcCgpt9boYYVb3fQg==
 
-typescript@^4.5.4:
-  version "4.6.2"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.6.2.tgz#fe12d2727b708f4eef40f51598b3398baa9611d4"
-  integrity sha512-HM/hFigTBHZhLXshn9sN37H085+hQGeJHJ/X7LpBWLID/fbc2acUMfU+lGD98X81sKP+pFa9f0DZmCwB9GnbAg==
+"typescript-lsif@https://github.com/dbaeumer/TypeScript/releases/download/4.4.0-beta-lsif.1/lsif-typescript-4.4.0-beta-lsif.1.tgz":
+  version "4.4.0-beta-lsif.1"
+  resolved "https://github.com/dbaeumer/TypeScript/releases/download/4.4.0-beta-lsif.1/lsif-typescript-4.4.0-beta-lsif.1.tgz#428732dbdaffa60068838cf352d9e79cc7ad2862"
+
+typescript@^3.8.3:
+  version "3.9.10"
+  resolved "http://bnpm.byted.org/typescript/-/typescript-3.9.10.tgz#70f3910ac7a51ed6bef79da7800690b19bf778b8"
+  integrity sha512-w6fIxVE/H1PkLKcCPsFqKE7Kv7QUwhU8qQY2MueZXWx5cPZdwFupLgKK3vntcK98BtNHZtAF4LA/yl2a7k8R6Q==
 
 unbox-primitive@^1.0.1:
   version "1.0.1"

@@ -1,4 +1,5 @@
-import * as ts from 'typescript'
+// eslint-disable-next-line id-length
+import ts from 'typescript-lsif'
 
 import { Position } from './Position'
 

@@ -4,7 +4,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as url from 'url'
 
-import * as ts from 'typescript'
+// eslint-disable-next-line id-length
+import ts from 'typescript-lsif'
 
 import packageJson from '../package.json'
 
