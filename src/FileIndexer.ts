@@ -93,8 +93,8 @@ export class FileIndexer {
           symbol_roles: role,
         })
       )
+      this.addSymbolInformation(identifier, sym, declaration, lsifSymbol)
       if (isDefinition) {
-        this.addSymbolInformation(identifier, sym, declaration, lsifSymbol)
         this.handleShorthandPropertyDefinition(declaration, range)
         // Only emit one symbol for definitions sites, see https://github.com/sourcegraph/lsif-typescript/issues/45
         break
@@ -145,12 +145,15 @@ export class FileIndexer {
     declaration: ts.Node,
     symbol: LsifSymbol
   ): void {
-    const documentation = [
-      '```ts\n' + this.signatureForDocumentation(node, sym) + '\n```',
-    ]
-    const docstring = sym.getDocumentationComment(this.checker)
-    if (docstring.length > 0) {
-      documentation.push(ts.displayPartsToString(docstring))
+    const info: ts.QuickInfo | undefined = this.languageService.getQuickInfoAtPosition(node, node.getSourceFile())
+    const documentation: string[] = []
+    if (info !== undefined) {
+      if (info.displayParts !== undefined) {
+        documentation.push(this.displayPartsToString(info.displayParts))
+      }
+      if (info.documentation && info.documentation.length > 0) {
+        documentation.push(this.displayPartsToString(info.documentation))
+      }
     }
 
     this.document.symbols.push(
@@ -160,6 +163,15 @@ export class FileIndexer {
         relationships: this.relationships(declaration, symbol),
       })
     )
+  }
+
+  private displayPartsToString(
+    displayParts: ts.SymbolDisplayPart[] | undefined
+  ) : string {
+    if (displayParts) {
+      return displayParts.map(displayPart => displayPart.text).join('')
+    }
+    return ''
   }
 
   private relationships(
@@ -391,74 +403,6 @@ export class FileIndexer {
     return undefined
   }
 
-  private signatureForDocumentation(node: ts.Node, sym: ts.Symbol): string {
-    const kind = scriptElementKind(node, sym)
-    const type = (): string =>
-      this.checker.typeToString(this.checker.getTypeAtLocation(node))
-    const signature = (): string | undefined => {
-      const declaration = sym.declarations?.[0]
-      if (!declaration) {
-        return undefined
-      }
-      const signatureDeclaration: ts.SignatureDeclaration | undefined =
-        ts.isFunctionDeclaration(declaration)
-          ? declaration
-          : ts.isMethodDeclaration(declaration)
-          ? declaration
-          : undefined
-      if (!signatureDeclaration) {
-        return undefined
-      }
-      const signature =
-        this.checker.getSignatureFromDeclaration(signatureDeclaration)
-      return signature ? this.checker.signatureToString(signature) : undefined
-    }
-    switch (kind) {
-      case ts.ScriptElementKind.localVariableElement:
-      case ts.ScriptElementKind.variableElement:
-        return 'var ' + node.getText() + ': ' + type()
-      case ts.ScriptElementKind.memberVariableElement:
-        return '(property) ' + node.getText() + ': ' + type()
-      case ts.ScriptElementKind.parameterElement:
-        return '(parameter) ' + node.getText() + ': ' + type()
-      case ts.ScriptElementKind.constElement:
-        return 'const ' + node.getText() + ': ' + type()
-      case ts.ScriptElementKind.letElement:
-        return 'let ' + node.getText() + ': ' + type()
-      case ts.ScriptElementKind.alias:
-        return 'type ' + node.getText()
-      case ts.ScriptElementKind.classElement:
-      case ts.ScriptElementKind.localClassElement:
-        return 'class ' + node.getText()
-      case ts.ScriptElementKind.interfaceElement:
-        return 'interface ' + node.getText()
-      case ts.ScriptElementKind.enumElement:
-        return 'enum ' + node.getText()
-      case ts.ScriptElementKind.enumMemberElement: {
-        let suffix = ''
-        const declaration = sym.declarations?.[0]
-        if (declaration && ts.isEnumMember(declaration)) {
-          const constantValue = this.checker.getConstantValue(declaration)
-          if (constantValue) {
-            suffix = ' = ' + constantValue.toString()
-          }
-        }
-        return '(enum member) ' + node.getText() + suffix
-      }
-      case ts.ScriptElementKind.functionElement:
-        return 'function ' + node.getText() + (signature() || type())
-      case ts.ScriptElementKind.memberFunctionElement:
-        return '(method) ' + node.getText() + (signature() || type())
-      case ts.ScriptElementKind.memberGetAccessorElement:
-        return 'get ' + node.getText() + ': ' + type()
-      case ts.ScriptElementKind.memberSetAccessorElement:
-        return 'set ' + node.getText() + type()
-      case ts.ScriptElementKind.constructorImplementationElement:
-        return ''
-    }
-    return node.getText() + ': ' + type()
-  }
-
   // Invokes the `onAncestor` callback for all "ancestors" of the provided node,
   // where "ancestor" is loosely defined as the superclass or superinterface of
   // that node. The callback is invoked on the `node` parameter itself if it's
@@ -547,57 +491,4 @@ function isAnonymousContainerOfSymbols(node: ts.Node): boolean {
     ts.isVariableStatement(node) ||
     ts.isVariableDeclarationList(node)
   )
-}
-
-function scriptElementKind(
-  node: ts.Node,
-  sym: ts.Symbol
-): ts.ScriptElementKind {
-  const flags = sym.getFlags()
-  if (flags & ts.SymbolFlags.TypeAlias) {
-    return ts.ScriptElementKind.alias
-  }
-  if (flags & ts.SymbolFlags.Class) {
-    return ts.ScriptElementKind.classElement
-  }
-  if (flags & ts.SymbolFlags.Interface) {
-    return ts.ScriptElementKind.interfaceElement
-  }
-  if (flags & ts.SymbolFlags.Enum) {
-    return ts.ScriptElementKind.enumElement
-  }
-  if (flags & ts.SymbolFlags.EnumMember) {
-    return ts.ScriptElementKind.enumMemberElement
-  }
-  if (flags & ts.SymbolFlags.Method) {
-    return ts.ScriptElementKind.memberFunctionElement
-  }
-  if (flags & ts.SymbolFlags.GetAccessor) {
-    return ts.ScriptElementKind.memberGetAccessorElement
-  }
-  if (flags & ts.SymbolFlags.SetAccessor) {
-    return ts.ScriptElementKind.memberSetAccessorElement
-  }
-  if (flags & ts.SymbolFlags.Constructor) {
-    return ts.ScriptElementKind.constructorImplementationElement
-  }
-  if (flags & ts.SymbolFlags.Function) {
-    return ts.ScriptElementKind.functionElement
-  }
-  if (flags & ts.SymbolFlags.Variable) {
-    if (ts_inline.isParameter(sym)) {
-      return ts.ScriptElementKind.parameterElement
-    }
-    if (node.flags & ts.NodeFlags.Const) {
-      return ts.ScriptElementKind.constElement
-    }
-    if (node.flags & ts.NodeFlags.Let) {
-      return ts.ScriptElementKind.letElement
-    }
-    return ts.ScriptElementKind.variableElement
-  }
-  if (flags & ts.SymbolFlags.ClassMember) {
-    return ts.ScriptElementKind.memberVariableElement
-  }
-  return ts.ScriptElementKind.unknown
 }
